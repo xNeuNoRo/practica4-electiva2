@@ -1,0 +1,68 @@
+name: Alerta de Notificación
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  execute-and-notify:
+    name: Ejecutar y Notificar
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Ejecutar script
+        run: node index.js
+
+      - name: Enviar notificación a ntfy
+        if: always()
+        env:
+          STATUS: ${{ job.status }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          case "$STATUS" in
+            success)
+              TITLE="Ejecución exitosa"
+              TAGS="white_check_mark,rocket"
+              PRIORITY="default"
+              ;;
+            failure)
+              TITLE="Ejecución fallida"
+              TAGS="x,warning"
+              PRIORITY="high"
+              ;;
+            *)
+              TITLE="Ejecución $STATUS"
+              TAGS="warning"
+              PRIORITY="default"
+              ;;
+          esac
+
+          printf 'Repositorio: %s\nAutor: %s\nEstado: %s\nCommit: %s\nEjecución: %s\n' \
+            "$REPO" "$ACTOR" "$STATUS" "$COMMIT_MSG" "$RUN_URL" |
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --max-time 15 \
+            -H "Title: $TITLE" \
+            -H "Priority: $PRIORITY" \
+            -H "Tags: $TAGS" \
+            -H "Click: $RUN_URL" \
+            --data-binary @- \
+            https://ntfy.sh/devops-itla
