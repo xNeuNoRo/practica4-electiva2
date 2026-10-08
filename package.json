@@ -1,0 +1,9 @@
+{
+  "name": "practica4",
+  "version": "0.0.0",
+  "description": "Practica 4: Integración Continua con GitHub Actions y Notificaciones en ntfy.sh",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+  }
+}
